@@ -1,7 +1,7 @@
 library("corHMM")
 library("phytools")
 
-setwd("~/Documents/Courses/Bergen_2019/PhyloCourse_Bergen_2019")
+setwd("~/Documents/Courses/Bergen_2019/PhyloCourse_Bergen_2019/PhyloCourse_Bergen-2019/R")
 source('write_nexus_RB.R')
 
 #   ____________________________________________________________________________
