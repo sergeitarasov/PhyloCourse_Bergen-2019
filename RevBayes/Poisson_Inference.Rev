@@ -1,0 +1,32 @@
+################################################################################
+#
+# Inferring Parameters of Poisson Distribution
+#
+################################################################################
+
+# data simulated given Pois(lambda=5)
+data = v(2, 2, 5, 5, 6, 5, 1, 3, 9, 5)
+
+# specify Prior and its moves
+ratePrior ~ dnGamma(2.0, 1.0)
+moves[1] = mvSlide(ratePrior)
+
+# associate data with model
+for (i in 1:data.size() ) {
+
+  y[i] ~ dnPoisson(ratePrior)
+  y[i].clamp(data[i])
+
+}
+
+# create model
+mymodel = model(ratePrior)
+
+# set monitors
+monitors[1] = mnModel(filename="output/Poisson_inf.log", printgen=10)
+monitors[2] = mnScreen(printgen=10, ratePrior)
+
+# MCMC
+mymcmc = mcmc(mymodel, monitors, moves)
+
+mymcmc.run(generations=10000)

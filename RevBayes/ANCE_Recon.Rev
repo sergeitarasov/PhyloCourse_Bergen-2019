@@ -1,0 +1,81 @@
+################################################################################
+#
+# Ancestral Character State Reconstruction using RevBayes
+#
+################################################################################
+
+# analysis name and data
+log_freq=500
+analysis_name = "Traits_recon"
+data <- readDiscreteCharacterData("data/Sim_traits.nex")
+
+taxa <-data.names()
+n_taxa <- data.ntaxa()
+
+
+# Read in tree
+psi = readTrees("data/Sim_tree.tre")[1]
+
+mni = 0
+mvi = 0
+
+######################################################
+#  Make Rate Matrix
+
+NUM_STATES=2
+for (i in 1:NUM_STATES) {
+  for (j in 1:NUM_STATES) {
+      rates[i][j] <-0.0
+  }
+}
+
+#rate prior
+r1 ~ dnExp(2)
+r2 ~ dnExp(2)
+
+
+# moves
+moves[++mvi] = mvScale(r2, lambda=0.2, tune=true, weight=2)
+moves[++mvi] = mvScale(r1, lambda=0.2, tune=true, weight=2)
+
+
+#make rate matrix
+rates[1][2]:=r1
+rates[2][1]:=r2
+
+Q_rate := fnFreeK(transition_rates=rates, rescaled=true, matrixExponentialMethod="eigen")
+
+root_freq <- simplex(1,1)
+
+
+# CTMC process
+
+phyMorpho ~ dnPhyloCTMC(tree=psi, Q=Q_rate, type="Standard", rootFreq=root_freq)
+
+phyMorpho.clamp(data)
+mymodel = model(Q_rate)
+
+####################################
+#  monitors
+###################################
+#  full model
+monitors[++mni] = mnModel(filename="output/" + analysis_name + ".log", printgen=200)
+
+monitors[++mni] = mnScreen(printgen=200)
+
+# ANCE monitor
+monitors[++mni] = mnJointConditionalAncestralState(filename="output/" + analysis_name + "_ans.log",
+ printgen=log_freq, tree=psi, ctmc=phyMorpho, type="Standard")
+
+# Stoch mapping monitor
+monitors[++mni]= mnStochasticCharacterMap(ctmc=phyMorpho, filename="output/" + analysis_name + "_stochm.log", printgen=log_freq)
+
+###############
+# run MCMC analysis
+###############
+mymcmc = mcmc(mymodel, monitors, moves, nruns=1, moveschedule="random")
+
+### pre-burnin to tune the proposals
+mymcmc.burnin(generations=1000, tuningInterval=100)
+# Run the MCMC #
+mymcmc.run(generations=100000)
